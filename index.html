@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shark Tales - A Data Story</title>
+  <link rel="stylesheet" href="bubble.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    
+    body {
+      font-family: 'Cormorant Garamond', serif;
+      background: linear-gradient(to bottom,
+        rgba(99, 167, 191, 1),
+        rgba(94, 86, 179, 1),
+        rgba(72, 139, 163, 1),
+        rgba(79, 124, 179, 1),
+        rgba(52, 115, 140, 1),
+        rgba(48, 92, 145, 1),
+        rgba(39, 82, 145, 1),
+        rgba(19, 58, 110, 1),
+        rgba(10, 50, 80, 1),
+        rgba(40, 41, 100, 1),
+        rgba(14, 52, 94, 1),
+        black);
+      color: white;
+      overflow-x: hidden;
+    }
+    
+    #canvas-container {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+    }
+    
+    #loading {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.5rem;
+      z-index: 1000;
+      transition: opacity 0.5s ease;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    
+    /* Light rays */
+    .rays {
+      --size: max(60vh, 80rem);
+      position: fixed;
+      pointer-events: none;
+      top: calc(var(--size) * -0.55);
+      left: 50%;
+      transform: translateX(-50%);
+      width: var(--size);
+      height: var(--size);
+      z-index: 0;
+    }
+    .rays > div {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      background: repeating-conic-gradient(
+        rgba(255, 251, 227, 0.15), 
+        rgba(255, 251, 227, 0.15) 10deg, 
+        transparent 10deg, 
+        transparent 20deg
+      );
+      -webkit-mask-image: radial-gradient(circle at center, black, transparent 50%);
+      mask-image: radial-gradient(circle at center, black, transparent 50%);
+      animation: raysRotate 120000ms linear infinite;
+    }
+    @keyframes raysRotate {
+      50% { transform: rotate(180deg) scale(1.2); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+    
+    /* Floating lights */
+    .lights {
+      position: fixed;
+      pointer-events: none;
+      top: 0; left: 0;
+      width: 100%; height: 100vh;
+      z-index: 2;
+    }
+    .light {
+      width: 0.35rem; height: 0.35rem;
+      position: absolute;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      filter: blur(1px);
+      animation: blink 2500ms var(--d, 0ms) infinite alternate;
+    }
+    @keyframes blink { to { opacity: 0; } }
+    
+    /* Vignette */
+    .vignette {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100vh;
+      pointer-events: none;
+      background: radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.4) 100%);
+      z-index: 3;
+    }
+    
+    .scenes { position: relative; z-index: 10; }
+    .scene { height: 150vh; position: relative; }
+    
+    .scene[data-scene="5"],
+    .scene[data-scene="6"],
+    .scene[data-scene="7"] { height: 80vh; }
+    
+    .scene[data-scene="8"],
+    .scene[data-scene="9"],
+    .scene[data-scene="10"],
+    .scene[data-scene="11"],
+    .scene[data-scene="12"],
+    .scene[data-scene="13"],
+    .scene[data-scene="14"],
+    .scene[data-scene="15"],
+    .scene[data-scene="16"] { height: 120vh; }
+    
+    .scene-text {
+      position: fixed;
+      top: 35%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      max-width: 800px;
+      padding: 2rem;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+      z-index: 100;
+    }
+    
+    .scene-text.visible { opacity: 1; }
+    
+    .scene-text p {
+      font-size: clamp(1.4rem, 4vw, 2.5rem);
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      text-shadow: 0 2px 30px rgba(0, 0, 0, 0.8);
+      line-height: 1.6;
+    }
+    
+    .scene-text h2 {
+      font-size: clamp(1.8rem, 5vw, 3.5rem);
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      text-shadow: 0 2px 30px rgba(0, 0, 0, 0.8);
+      margin-bottom: 0.5rem;
+    }
+    
+    .scene-text .stat {
+      font-size: clamp(3rem, 12vw, 7rem);
+      font-weight: 600;
+      color: rgba(255, 251, 227, 0.95);
+      text-shadow: 0 0 60px rgba(255, 251, 227, 0.5);
+      display: block;
+      letter-spacing: 0.02em;
+    }
+    
+    .scroll-indicator {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      z-index: 100;
+      transition: opacity 0.5s ease;
+    }
+    .scroll-indicator.hidden { opacity: 0; }
+    .scroll-indicator span { display: block; font-size: 1rem; }
+    .scroll-indicator .arrow { animation: bounce 0.6s infinite alternate; }
+    @keyframes bounce { to { transform: translateY(8px); } }
+    
+    .bubbles { position: fixed; pointer-events: none; z-index: 2; }
+    .bubble {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), transparent 60%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      animation: rise 4s ease-in infinite;
+      opacity: 0;
+    }
+    @keyframes rise {
+      0% { transform: translateY(0) scale(0); opacity: 0; }
+      10% { opacity: 0.6; transform: scale(1); }
+      90% { opacity: 0.3; }
+      100% { transform: translateY(-300px) scale(0.5); opacity: 0; }
+    }
+    
+    .data-viz {
+      position: fixed;
+      bottom: 5%;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 1s ease;
+      pointer-events: none;
+      z-index: 50;
+    }
+    
+    .data-scene.active .data-viz {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    .data-viz {
+      background: rgba(255, 255, 255, 0.95) !important;
+      border-radius: 12px !important;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    /*========================================
+      MISCONCEPTION BUBBLES
+    ========================================*/
+    .myth-bubbles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 90;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    
+    .misconception-scene.active .myth-bubbles {
+      opacity: 1;
+    }
+    
+    .myth-bubble {
+      position: absolute;
+      background: rgba(180, 60, 60, 0.85);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 20px;
+      font-size: clamp(0.9rem, 2vw, 1.3rem);
+      font-style: italic;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      transform: scale(0.8);
+      animation: mythAppear 0.6s var(--delay, 0s) forwards;
+    }
+    
+    @keyframes mythAppear {
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+    
+    /*========================================
+      DEBUNKING FACTS
+    ========================================*/
+    .debunk-facts {
+      position: fixed;
+      top: 55%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: left;
+      z-index: 90;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    
+    .debunk-scene.active .debunk-facts {
+      opacity: 1;
+    }
+    
+    .debunk-item {
+      margin-bottom: 1.5rem;
+      font-size: clamp(1rem, 2.5vw, 1.5rem);
+    }
+    
+    .myth-crossed {
+      color: rgba(255, 100, 100, 0.9);
+      text-decoration: line-through;
+      text-decoration-thickness: 2px;
+      margin-right: 1rem;
+    }
+    
+    .fact {
+      color: rgba(100, 255, 150, 0.95);
+      font-weight: 400;
+    }
+    
+    /*========================================
+      IMPACT SCENE - RED STAT
+    ========================================*/
+    .impact-stat {
+      color: rgba(255, 80, 80, 0.95) !important;
+      text-shadow: 0 0 60px rgba(255, 50, 50, 0.6) !important;
+    }
+    
+    /*========================================
+      FISHING NET OVERLAY
+    ========================================*/
+    #fishing-net {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 80;
+      opacity: 0;
+      transition: opacity 1s ease;
+      background: 
+        repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 30px,
+          rgba(100, 80, 60, 0.15) 30px,
+          rgba(100, 80, 60, 0.15) 32px
+        ),
+        repeating-linear-gradient(
+          -45deg,
+          transparent,
+          transparent 30px,
+          rgba(100, 80, 60, 0.15) 30px,
+          rgba(100, 80, 60, 0.15) 32px
+        );
+    }
+    
+    .impact-scene.active #fishing-net {
+      opacity: 1;
+    }
+    
+    /*========================================
+      DARK OVERLAY FOR MISCONCEPTION SCENES
+    ========================================*/
+    #dark-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0);
+      pointer-events: none;
+      z-index: 4;
+      transition: background 1s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading shark...</div>
+  <div id="dark-overlay"></div>
+  
+  <div class="rays"><div></div></div>
+  
+  <div class="lights">
+    <div class="light" style="top: 10%; left: 25%; --d: 0ms;"></div>
+    <div class="light" style="top: 40%; left: 12%; --d: 200ms;"></div>
+    <div class="light" style="top: 60%; left: 18%; --d: 350ms;"></div>
+    <div class="light" style="top: 25%; left: 66%; --d: 600ms;"></div>
+    <div class="light" style="top: 43%; left: 55%; --d: 1210ms;"></div>
+    <div class="light" style="top: 90%; left: 37%; --d: 420ms;"></div>
+    <div class="light" style="top: 82%; left: 91%; --d: 1100ms;"></div>
+    <div class="light" style="top: 67%; left: 81%; --d: 1560ms;"></div>
+  </div>
+  
+  <div class="vignette"></div>
+  <div id="canvas-container"></div>
+  <div class="bubbles" id="bubbles"></div>
+  
+  <div class="scenes">
+    <!--======== INTRO ========-->
+    <section class="scene" data-scene="0"><div class="scene-text"><p>Beneath the surface</p></div></section>
+    <section class="scene" data-scene="1"><div class="scene-text"><p>an apex predator lurks nearby</p></div></section>
+    <section class="scene" data-scene="2"><div class="scene-text"><p>hunting for its prey</p></div></section>
+    <section class="scene" data-scene="3"><div class="scene-text"><p>but just like us</p></div></section>
+    <section class="scene" data-scene="4"><div class="scene-text"><p>it's just trying to survive</p></div></section>
+    
+    <!--======== ECOSYSTEM ========-->
+    <section class="scene" data-scene="5"><div class="scene-text"><p>For 450 million years</p></div></section>
+    <section class="scene" data-scene="6"><div class="scene-text"><p>sharks have roamed our oceans</p></div></section>
+    <section class="scene" data-scene="7"><div class="scene-text"><p>They are not monsters</p></div></section>
+    <section class="scene" data-scene="8"><div class="scene-text"><p>just creatures built to survive</p></div></section>
+    <section class="scene" data-scene="9"><div class="scene-text"><p>Misconceptions lead to fear</p><p>fear leads to destruction</p></div></section>
+    <section class="scene" data-scene="10"><div class="scene-text"><p>But the truth is far more beautiful</p></div></section>
+    <section class="scene" data-scene="11"><div class="scene-text"><p>Sharks shape the balance of the sea</p></div></section>
+    <section class="scene" data-scene="12"><div class="scene-text"><p>Their skeletons made of cartilage</p><p>fast, flexible, efficient</p></div></section>
+    <section class="scene" data-scene="13"><div class="scene-text"><p>They are indicator species</p><p>their presence signals a healthy ocean</p></div></section>
+    <section class="scene" data-scene="14"><div class="scene-text"><p>By hunting the weak and sick</p><p>they prevent disease</p></div></section>
+    <section class="scene" data-scene="15"><div class="scene-text"><p>and protect biodiversity</p></div></section>
+    <section class="scene" data-scene="16"><div class="scene-text"><p>When sharks thrive</p><p>the entire ocean thrives</p></div></section>
+
+    <!--======== HUMAN PRESENCE ========-->
+    <section class="scene" data-scene="17"><div class="scene-text"><p>Yet at the surface</p></div></section>
+    <section class="scene" data-scene="18"><div class="scene-text"><p>their world collides with ours</p></div></section>
+    <section class="scene" data-scene="19"><div class="scene-text"><p>Climate change has pushed sharks</p><p>into new geographic regions</p></div></section>
+    <section class="scene" data-scene="20"><div class="scene-text"><p>Increased fishing, tourism</p><p>and coastal activities</p></div></section>
+    <section class="scene" data-scene="21"><div class="scene-text"><p>have led to a rise in</p><p>human-shark encounters</p></div></section>
+
+    <!--======== DATA VIZ ========-->
+    <section class="scene" data-scene="22"><div class="scene-text"><p>These encounters fuel</p><p>fear, fascination, and misunderstanding</p></div></section>
+    <section class="scene data-scene" data-scene="23"><div class="scene-text"><p>But the data tells a different story</p></div><div class="data-viz" id="sightings-chart"></div></section>
+    <section class="scene data-scene" data-scene="24"><div class="scene-text"><p>Shark sightings have increased</p><p>as more humans enter their waters</p></div><div class="data-viz" id="sightings-chart-2"></div></section>
+    <section class="scene data-scene" data-scene="25"><div class="scene-text"><p>The ocean holds us both</p><p>curiosity meets caution</p><p>each year these crossings are counted as incidents</p></div><div class="data-viz" id="incidents-chart"></div></section>
+    <section class="scene data-scene" data-scene="26"><div class="scene-text"><p>Not every shark meets us equally</p><p>see the incidents by species</p></div><div class="data-viz" id="bubble-chart-wrapper"><div id="bubble-chart-container"><div class="toggle-container"><span class="toggle-label fatal-label active">Fatal</span><div id="bubble-toggle" class="toggle-switch"></div><span class="toggle-label non-fatal-label">Non-fatal</span></div><div id="bubble-chart"></div><div id="bubble-tooltip" class="bubble-tooltip"></div></div></div></section>
+    
+    <section class="scene" data-scene="27"><div class="scene-text"><p>Humans pose a far greater threat</p><p>to sharks than sharks do to us</p></div></section>
+
+    <!--======== MISCONCEPTIONS - Shark descends to darker depths ========-->
+    <section class="scene misconception-scene" data-scene="28">
+      <div class="scene-text"><p>Yet misconceptions persist</p></div>
+      <div class="myth-bubbles">
+        <div class="myth-bubble" style="--delay: 0.2s; top: 20%; left: 10%;">"Sharks are mindless killers"</div>
+        <div class="myth-bubble" style="--delay: 0.5s; top: 65%; left: 60%;">"Sharks target humans"</div>
+        <div class="myth-bubble" style="--delay: 0.8s; top: 35%; left: 55%;">"All sharks are dangerous"</div>
+      </div>
+    </section>
+    
+    <section class="scene misconception-scene" data-scene="29">
+      <div class="scene-text"><p>Fueled by media sensationalism</p><p>and a primal fear of the unknown</p></div>
+      <div class="myth-bubbles">
+        <div class="myth-bubble" style="--delay: 0s; top: 25%; left: 55%;">"Shark attacks are common"</div>
+        <div class="myth-bubble" style="--delay: 0.3s; top: 60%; left: 8%;">"Sharks can smell blood from miles away"</div>
+      </div>
+    </section>
+    
+    <!--======== DEBUNKING - Shark swims upward ========-->
+    <section class="scene debunk-scene" data-scene="30">
+      <div class="scene-text"><p>But the truth tells a different story</p></div>
+      <div class="debunk-facts">
+        <div class="debunk-item">
+          <span class="myth-crossed">"Mindless killers"</span>
+          <span class="fact">→ Intelligent, curious creatures</span>
+        </div>
+      </div>
+    </section>
+    
+    <section class="scene debunk-scene" data-scene="31">
+      <div class="scene-text"></div>
+      <div class="debunk-facts">
+        <div class="debunk-item">
+          <span class="myth-crossed">"Sharks target humans"</span>
+          <span class="fact">→ Humans are not on their menu</span>
+        </div>
+        <div class="debunk-item" style="margin-top: 1rem;">
+          <span class="myth-crossed">"Attacks are common"</span>
+          <span class="fact">→ ~5 fatal attacks per year globally</span>
+        </div>
+      </div>
+    </section>
+    
+    <section class="scene debunk-scene" data-scene="32">
+      <div class="scene-text">
+        <p>You're more likely to be killed by</p>
+        <p>a vending machine, lightning, or a cow</p>
+      </div>
+    </section>
+
+    <!--======== HUMAN IMPACT - THE KILL ========-->
+    <section class="scene impact-scene" data-scene="33">
+      <div class="scene-text"><p>Meanwhile, every year</p></div>
+    </section>
+    
+    <section class="scene impact-scene" data-scene="34">
+      <div class="scene-text">
+        <p>humans kill</p>
+        <span class="stat impact-stat">100 million</span>
+        <p>sharks</p>
+      </div>
+    </section>
+    
+    <section class="scene impact-scene" data-scene="35">
+      <div class="scene-text"><p>For their fins</p></div>
+      <div id="fishing-net"></div>
+    </section>
+    
+    <section class="scene impact-scene" data-scene="36">
+      <div class="scene-text"><p>For sport</p></div>
+    </section>
+    
+    <section class="scene impact-scene" data-scene="37">
+      <div class="scene-text"><p>Out of fear</p></div>
+    </section>
+    
+    <section class="scene" data-scene="38">
+      <div class="scene-text">
+        <p>Overfishing has caused a</p>
+        <span class="stat">71%</span>
+        <p>decline in oceanic sharks since 1970</p>
+      </div>
+    </section>
+    
+    <section class="scene" data-scene="39">
+      <div class="scene-text"><p>pushing some species</p><p>to extinction</p></div>
+    </section>
+
+    <!--======== CALL TO ACTION ========-->
+    <section class="scene" data-scene="40"><div class="scene-text"><p>The ocean needs them</p></div></section>
+    <section class="scene" data-scene="41"><div class="scene-text"><p>and so do we</p></div></section>
+    <section class="scene" data-scene="42"><div class="scene-text"><h2>Protect the sharks</h2><p>protect the ocean</p><p>protect our future</p></div></section>
+  </div>
+  
+  <div class="scroll-indicator"><span>Scroll</span><span class="arrow">↓</span></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script src="bubbleViz.js"></script>
+  <script src="sightings.js"></script>
+  
+  <script type="importmap">
+    { "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }}
+  </script>
+  
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    
+    const INTRO_CONFIG = {
+      startZ: -20, endZ: 2,
+      startScale: 0.2, endScale: 1.8,
+      rotationY: 0,
+    };
+    
+    const ECOSYSTEM_CONFIG = {
+      startX: 0, endX: -5,
+      startY: 0, endY: 0.2,
+      startZ: 2, endZ: -3,
+      startScale: 1.8, endScale: 0.7,
+      startRotY: 0, endRotY: Math.PI/2 + 0.2,
+      startRotX: 0, endRotX: 0.03,
+      startRotZ: 0, endRotZ: 0.08,
+    };
+    
+    const ECOSYSTEM_START_SCENE = 5;
+    const ECOSYSTEM_END_SCENE = 7;
+    
+    const SWIM_SCENES = {
+      // Ecosystem hold
+      8:  { pos: { x: -5, y: 0.2, z: -3 },   rot: { x: 0.03, y: Math.PI/2 + 0.2, z: 0.08 },  scale: 0.7 },
+      9:  { pos: { x: -5, y: 0.2, z: -3 },   rot: { x: 0.03, y: Math.PI/2 + 0.2, z: 0.08 },  scale: 0.7 },
+      10: { pos: { x: -5, y: 0.2, z: -3 },   rot: { x: 0.03, y: Math.PI/2 + 0.2, z: 0.08 },  scale: 0.7 },
+      11: { pos: { x: -5, y: 0.2, z: -3 },   rot: { x: 0.03, y: Math.PI/2 + 0.2, z: 0.08 },  scale: 0.7 },
+      12: { pos: { x: -5, y: 0.2, z: -3 },   rot: { x: 0.03, y: Math.PI/2 + 0.2, z: 0.08 },  scale: 0.7 },
+      13: { pos: { x: -5, y: 0.2, z: -3 },   rot: { x: 0.03, y: Math.PI/2 + 0.2, z: 0.08 },  scale: 0.7 },
+      14: { pos: { x: -5, y: 0.2, z: -3 },   rot: { x: 0.03, y: Math.PI/2 + 0.2, z: 0.08 },  scale: 0.7 },
+      15: { pos: { x: -5, y: 0.2, z: -3 },   rot: { x: 0.03, y: Math.PI/2 + 0.2, z: 0.08 },  scale: 0.7 },
+      16: { pos: { x: -5, y: 0.2, z: -3 },   rot: { x: 0.03, y: Math.PI/2 + 0.2, z: 0.08 },  scale: 0.7 },
+      
+      // Human presence - boat scenes
+      17: { pos: { x: -2, y: 0, z: 0 },      rot: { x: -0.3, y: Math.PI/4, z: 0.1 },         scale: 1.2, showBoat: true },
+      18: { pos: { x: -1, y: 1.5, z: 1 },    rot: { x: -0.4, y: 0.2, z: 0.05 },              scale: 1.3, showBoat: true },
+      19: { pos: { x: 0, y: 2.5, z: 2 },     rot: { x: -0.5, y: 0, z: 0 },                   scale: 1.4, showBoat: true },
+      20: { pos: { x: 0.5, y: 3, z: 2.5 },   rot: { x: -0.4, y: -0.1, z: 0.05 },             scale: 1.5, showBoat: true },
+      21: { pos: { x: 1, y: 3.5, z: 3 },     rot: { x: -0.3, y: -0.2, z: 0.08 },             scale: 1.4, showBoat: true },
+      22: { pos: { x: 1.5, y: 3, z: 2.5 },   rot: { x: -0.2, y: -0.3, z: 0.05 },             scale: 1.3, showBoat: true },
+      
+      // Data viz scenes
+      23: { pos: { x: -3, y: 2, z: 2 },       rot: { x: -0.1, y: -Math.PI/2, z: 0.05 },       scale: 1.0 },
+      24: { pos: { x: -4, y: 1, z: 1 },       rot: { x: 0, y: -Math.PI/2 - 0.2, z: 0.08 },    scale: 0.9 },
+      25: { pos: { x: -1.5, y: 0.5, z: 0.8 }, rot: { x: -0.05, y: Math.PI/2, z: 0.02 },       scale: 1.0, showDiver: true },
+      26: { pos: { x: -4.5, y: 0.5, z: 0 },   rot: { x: 0.05, y: -Math.PI/2 - 0.1, z: 0.05 }, scale: 0.85 },
+      27: { pos: { x: -5, y: 0, z: -1 },      rot: { x: 0.1, y: -Math.PI/2, z: 0 },           scale: 0.8 },
+      
+      // MISCONCEPTIONS - Shark descends into darker depths
+      28: { pos: { x: -3, y: -2, z: -2 },     rot: { x: 0.3, y: -Math.PI/2 + 0.3, z: 0.1 },   scale: 0.9, darken: 0.4 },
+      29: { pos: { x: -2, y: -3, z: -3 },     rot: { x: 0.4, y: -Math.PI/2, z: 0.05 },        scale: 0.85, darken: 0.5 },
+      
+      // DEBUNKING - Shark swims upward
+      30: { pos: { x: -1, y: -1, z: -1 },     rot: { x: -0.3, y: -Math.PI/2 - 0.2, z: 0 },    scale: 0.9, darken: 0.3 },
+      31: { pos: { x: 0, y: 1, z: 0 },        rot: { x: -0.4, y: -Math.PI/3, z: 0.05 },       scale: 1.0, darken: 0.2 },
+      32: { pos: { x: 1, y: 2, z: 1 },        rot: { x: -0.3, y: -Math.PI/4, z: 0 },          scale: 1.1, darken: 0.1 },
+      
+      // IMPACT - Shark gets caught/slows
+      33: { pos: { x: 2, y: 1, z: 2 },        rot: { x: -0.1, y: 0, z: 0 },                   scale: 1.2 },
+      34: { pos: { x: 1, y: 0, z: 3 },        rot: { x: 0, y: 0.2, z: 0.1 },                  scale: 1.4, showNet: true },
+      35: { pos: { x: 0, y: -0.5, z: 3 },     rot: { x: 0.2, y: 0.3, z: 0.2 },                scale: 1.3, showNet: true, struggle: true },
+      36: { pos: { x: -0.5, y: -1, z: 2.5 },  rot: { x: 0.3, y: 0.4, z: 0.3 },                scale: 1.2, showNet: true, struggle: true },
+      37: { pos: { x: -1, y: -1.5, z: 2 },    rot: { x: 0.4, y: 0.2, z: 0.2 },                scale: 1.1, showNet: true },
+      
+      // Decline stats
+      38: { pos: { x: -2, y: -0.5, z: 0 },    rot: { x: 0.1, y: -Math.PI/2, z: 0 },           scale: 0.9 },
+      39: { pos: { x: -3, y: -1, z: -1 },     rot: { x: 0.15, y: -Math.PI/2 + 0.1, z: -0.05 },scale: 0.8 },
+      
+      // Call to action - Shark recovers, approaches
+      40: { pos: { x: 2, y: 0, z: 0 },        rot: { x: -0.05, y: 0.3, z: 0.05 },             scale: 1.3 },
+      41: { pos: { x: 0, y: 0.2, z: 2 },      rot: { x: -0.03, y: 0, z: 0 },                  scale: 1.6 },
+      42: { pos: { x: 0, y: 0, z: 3 },        rot: { x: 0, y: 0, z: 0 },                      scale: 1.8 },
+    };
+    
+    const INTRO_SCENE_COUNT = 5;
+    
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 10);
+    
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+    
+    scene.add(new THREE.AmbientLight(0x4a6fa5, 0.6));
+    const topLight = new THREE.DirectionalLight(0xfffbe3, 1.0);
+    topLight.position.set(0, 10, 5);
+    scene.add(topLight);
+    const fillLight = new THREE.DirectionalLight(0x6b5b95, 0.4);
+    fillLight.position.set(-5, 0, -5);
+    scene.add(fillLight);
+    const backLight = new THREE.DirectionalLight(0x88ccff, 0.3);
+    backLight.position.set(0, -5, -10);
+    scene.add(backLight);
+    
+    let shark = null;
+    let sharkMixer = null;
+    const sharkGroup = new THREE.Group();
+    scene.add(sharkGroup);
+    sharkGroup.position.set(0, 0, INTRO_CONFIG.startZ);
+    sharkGroup.scale.setScalar(INTRO_CONFIG.startScale);
+    let targetRotation = { x: 0, y: 0, z: 0 };
+    let isStruggling = false;
+    
+    const loader = new GLTFLoader();
+    loader.load('shark.glb',
+      (gltf) => {
+        shark = gltf.scene;
+        shark.scale.set(2.5, 2.5, 2.5);
+        shark.position.y = -1.5;
+        shark.traverse((child) => {
+          if (child.isMesh && child.material) {
+            child.material.transparent = true;
+            child.material.opacity = 0.95;
+          }
+        });
+        sharkGroup.add(shark);
+        if (gltf.animations?.length > 0) {
+          sharkMixer = new THREE.AnimationMixer(shark);
+          sharkMixer.clipAction(gltf.animations[0]).play();
+        }
+        document.getElementById('loading').classList.add('hidden');
+      },
+      (p) => { document.getElementById('loading').textContent = `Loading... ${(p.loaded/p.total*100).toFixed(0)}%`; },
+      (e) => { console.error(e); }
+    );
+    
+    // Boat
+    let boat = null;
+    const boatGroup = new THREE.Group();
+    scene.add(boatGroup);
+    boatGroup.position.set(0, 8, 0);
+    boatGroup.visible = false;
+    
+    loader.load('boat.glb',
+      (gltf) => {
+        boat = gltf.scene;
+        boat.scale.set(1.5, 1.5, 1.5);
+        boat.traverse((child) => {
+          if (child.isMesh && child.material) {
+            child.material.transparent = true;
+            child.material.opacity = 0.7;
+            if (child.material.color) child.material.color.multiplyScalar(0.4);
+          }
+        });
+        boatGroup.add(boat);
+      },
+      null, (e) => console.error(e)
+    );
+
+    function setBoatOpacity(value) {
+      if (!boat) return;
+      boat.traverse((child) => {
+        if (child.isMesh && child.material) child.material.opacity = value;
+      });
+    }
+    
+    function animateBoat(time) {
+      if (boat && boatGroup.visible) {
+        boatGroup.position.y = 8 + Math.sin(time * 0.8) * 0.15;
+        boatGroup.rotation.z = Math.sin(time * 0.5) * 0.03;
+      }
+    }
+    
+    // Diver
+    let diver = null;
+    let diverMixer = null;
+    let diverIdleAction = null;
+    let diverSwimAction = null;
+    let diverCurrentAction = null;
+    const diverGroup = new THREE.Group();
+    scene.add(diverGroup);
+    diverGroup.visible = false;
+    diverGroup.position.set(6, -5, 1.5);
+    
+    loader.load('diver.glb',
+      (gltf) => {
+        diver = gltf.scene;
+        diver.scale.set(0.3, 0.3, 0.3);
+        diver.position.set(0, -0.5, 0);
+        diver.traverse((child) => {
+          if (child.isMesh && child.material) {
+            child.material.transparent = true;
+            child.material.opacity = 0.9;
+          }
+        });
+        diverGroup.add(diver);
+        const clips = gltf.animations || [];
+        if (clips.length > 0) {
+          diverMixer = new THREE.AnimationMixer(diver);
+          diverIdleAction = diverMixer.clipAction(clips[0]);
+          if (clips[1]) diverSwimAction = diverMixer.clipAction(clips[1]);
+          diverIdleAction.setLoop(THREE.LoopRepeat, Infinity).play();
+          diverCurrentAction = diverIdleAction;
+        }
+      },
+      null, (e) => console.error(e)
+    );
+
+    function switchDiverAction(next) {
+      if (!next || !diverMixer || diverCurrentAction === next) return;
+      next.reset().play();
+      if (diverCurrentAction) next.crossFadeFrom(diverCurrentAction, 0.3, false);
+      diverCurrentAction = next;
+    }
+    
+    function showDiver() {
+      diverGroup.visible = true;
+      switchDiverAction(diverIdleAction);
+      gsap.to(diverGroup.position, { x: 4.5, y: -1, z: 1.5, duration: 2, ease: "power1.inOut" });
+      gsap.to(diverGroup.rotation, { y: Math.PI / 2, duration: 2, ease: "power1.inOut" });
+    }
+    
+    function hideDiver() {
+      if (diverSwimAction) switchDiverAction(diverSwimAction);
+      gsap.to(diverGroup.position, {
+        x: 9, y: -1, duration: 1.6, ease: "power2.in",
+        onComplete: () => {
+          diverGroup.visible = false;
+          diverGroup.position.set(6, -5, 1.5);
+        }
+      });
+    }
+    
+    // Particles
+    const particleCount = 150;
+    const particleGeom = new THREE.BufferGeometry();
+    const particlePos = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      particlePos[i * 3] = (Math.random() - 0.5) * 30;
+      particlePos[i * 3 + 1] = (Math.random() - 0.5) * 20;
+      particlePos[i * 3 + 2] = (Math.random() - 0.5) * 30;
+    }
+    particleGeom.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+    const particles = new THREE.Points(particleGeom, new THREE.PointsMaterial({
+      color: 0xffffff, size: 0.08, transparent: true, opacity: 0.5,
+      blending: THREE.AdditiveBlending, sizeAttenuation: true
+    }));
+    scene.add(particles);
+    
+    // Scroll
+    gsap.registerPlugin(ScrollTrigger);
+    const scenes = document.querySelectorAll('.scene');
+    let currentScene = 0;
+    const introScenes = Array.from(scenes).slice(0, INTRO_SCENE_COUNT);
+    const ecosystemScenes = Array.from(scenes).slice(ECOSYSTEM_START_SCENE, ECOSYSTEM_END_SCENE + 1);
+    
+    ScrollTrigger.create({
+      trigger: introScenes[0],
+      start: "top top",
+      endTrigger: introScenes[INTRO_SCENE_COUNT - 1],
+      end: "bottom bottom",
+      scrub: 1.5,
+      onUpdate: (self) => {
+        const progress = self.progress;
+        sharkGroup.position.z = INTRO_CONFIG.startZ + (INTRO_CONFIG.endZ - INTRO_CONFIG.startZ) * progress;
+        sharkGroup.scale.setScalar(INTRO_CONFIG.startScale + (INTRO_CONFIG.endScale - INTRO_CONFIG.startScale) * progress);
+        sharkGroup.position.x = 0;
+        sharkGroup.position.y = 0;
+        sharkGroup.rotation.set(0, 0, 0);
+        targetRotation = { x: 0, y: 0, z: 0 };
+      }
+    });
+    
+    ScrollTrigger.create({
+      trigger: ecosystemScenes[0],
+      start: "top top",
+      endTrigger: ecosystemScenes[ecosystemScenes.length - 1],
+      end: "bottom bottom",
+      scrub: 0.5,
+      onUpdate: (self) => {
+        const p = self.progress;
+        const cfg = ECOSYSTEM_CONFIG;
+        sharkGroup.position.x = cfg.startX + (cfg.endX - cfg.startX) * p;
+        sharkGroup.position.y = cfg.startY + (cfg.endY - cfg.startY) * p;
+        sharkGroup.position.z = cfg.startZ + (cfg.endZ - cfg.startZ) * p;
+        sharkGroup.scale.setScalar(cfg.startScale + (cfg.endScale - cfg.startScale) * p);
+        sharkGroup.rotation.x = cfg.startRotX + (cfg.endRotX - cfg.startRotX) * p;
+        sharkGroup.rotation.y = cfg.startRotY + (cfg.endRotY - cfg.startRotY) * p;
+        sharkGroup.rotation.z = cfg.startRotZ + (cfg.endRotZ - cfg.startRotZ) * p;
+        targetRotation = { x: sharkGroup.rotation.x, y: sharkGroup.rotation.y, z: sharkGroup.rotation.z };
+      }
+    });
+    
+    scenes.forEach((sceneEl, index) => {
+      const text = sceneEl.querySelector('.scene-text');
+      ScrollTrigger.create({
+        trigger: sceneEl,
+        start: "top 60%",
+        end: "bottom 40%",
+        onEnter: () => showText(text, index, sceneEl),
+        onEnterBack: () => showText(text, index, sceneEl),
+        onLeave: () => hideText(text, sceneEl),
+        onLeaveBack: () => hideText(text, sceneEl),
+      });
+    });
+    
+    function showText(textEl, sceneIndex, sceneEl) {
+      document.querySelectorAll('.scene-text').forEach(t => t.classList.remove('visible'));
+      textEl.classList.add('visible');
+      
+      document.querySelectorAll('.data-scene').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.misconception-scene').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.debunk-scene').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.impact-scene').forEach(s => s.classList.remove('active'));
+      
+      if (sceneEl.classList.contains('data-scene')) sceneEl.classList.add('active');
+      if (sceneEl.classList.contains('misconception-scene')) sceneEl.classList.add('active');
+      if (sceneEl.classList.contains('debunk-scene')) sceneEl.classList.add('active');
+      if (sceneEl.classList.contains('impact-scene')) sceneEl.classList.add('active');
+      
+      currentScene = sceneIndex;
+      
+      if (sceneIndex > ECOSYSTEM_END_SCENE && SWIM_SCENES[sceneIndex]) {
+        moveSharkTo(SWIM_SCENES[sceneIndex]);
+      }
+      
+      createBubbles();
+    }
+    
+    function hideText(textEl, sceneEl) {
+      textEl.classList.remove('visible');
+      if (sceneEl.classList.contains('data-scene')) sceneEl.classList.remove('active');
+      if (sceneEl.classList.contains('misconception-scene')) sceneEl.classList.remove('active');
+      if (sceneEl.classList.contains('debunk-scene')) sceneEl.classList.remove('active');
+      if (sceneEl.classList.contains('impact-scene')) sceneEl.classList.remove('active');
+    }
+    
+    function moveSharkTo(config) {
+      gsap.to(sharkGroup.position, {
+        x: config.pos.x, y: config.pos.y, z: config.pos.z,
+        duration: 3, ease: "power1.inOut"
+      });
+      gsap.to(sharkGroup.scale, {
+        x: config.scale, y: config.scale, z: config.scale,
+        duration: 3, ease: "power1.inOut"
+      });
+      targetRotation = { ...config.rot };
+      
+      // Dark overlay for misconception scenes
+      const darkOverlay = document.getElementById('dark-overlay');
+      if (config.darken) {
+        gsap.to(darkOverlay, { 
+          backgroundColor: `rgba(0, 0, 0, ${config.darken})`, 
+          duration: 1 
+        });
+      } else {
+        gsap.to(darkOverlay, { 
+          backgroundColor: 'rgba(0, 0, 0, 0)', 
+          duration: 1 
+        });
+      }
+      
+      // Struggle animation
+      isStruggling = config.struggle || false;
+      
+      // Boat
+      if (config.showBoat) {
+        boatGroup.visible = true;
+        setBoatOpacity(0.7);
+        gsap.to(boatGroup.position, { y: 8, duration: 1, ease: "power2.out" });
+      } else if (boatGroup.visible) {
+        gsap.to(boatGroup.position, { y: 14, duration: 1.4, ease: "power2.in", 
+          onComplete: () => boatGroup.visible = false 
+        });
+      }
+
+      // Diver
+      if (config.showDiver) showDiver();
+      else if (diverGroup.visible) hideDiver();
+    }
+    
+    ScrollTrigger.create({
+      trigger: scenes[0],
+      start: "top top-=50",
+      onEnter: () => document.querySelector('.scroll-indicator').classList.add('hidden'),
+      onLeaveBack: () => document.querySelector('.scroll-indicator').classList.remove('hidden'),
+    });
+    
+    function createBubbles() {
+      const container = document.getElementById('bubbles');
+      for (let i = 0; i < 4; i++) {
+        setTimeout(() => {
+          const bubble = document.createElement('div');
+          bubble.className = 'bubble';
+          const size = Math.random() * 15 + 8;
+          bubble.style.cssText = `width: ${size}px; height: ${size}px; left: ${Math.random() * window.innerWidth}px; top: ${Math.random() * window.innerHeight * 0.5 + window.innerHeight * 0.3}px;`;
+          container.appendChild(bubble);
+          setTimeout(() => bubble.remove(), 4000);
+        }, i * 150);
+      }
+    }
+    
+    const clock = new THREE.Clock();
+    let time = 0;
+    
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      time += delta;
+      if (sharkMixer) sharkMixer.update(delta);
+      if (diverMixer) diverMixer.update(delta);
+      
+      if (currentScene > ECOSYSTEM_END_SCENE) {
+        const lerpSpeed = 0.04;
+        sharkGroup.rotation.x += (targetRotation.x - sharkGroup.rotation.x) * lerpSpeed;
+        sharkGroup.rotation.y += (targetRotation.y - sharkGroup.rotation.y) * lerpSpeed;
+        sharkGroup.rotation.z += (targetRotation.z - sharkGroup.rotation.z) * lerpSpeed;
+        
+        // Normal swimming motion or struggle
+        if (isStruggling) {
+          sharkGroup.rotation.z += Math.sin(time * 8) * 0.05;
+          sharkGroup.rotation.x += Math.sin(time * 6) * 0.03;
+          sharkGroup.position.x += Math.sin(time * 5) * 0.01;
+        } else {
+          sharkGroup.rotation.z += Math.sin(time * 1.5) * 0.01;
+          sharkGroup.rotation.x += Math.sin(time * 0.8) * 0.005;
+        }
+      }
+      
+      const pos = particleGeom.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        pos[i * 3 + 1] += 0.006;
+        if (pos[i * 3 + 1] > 12) {
+          pos[i * 3 + 1] = -12;
+          pos[i * 3] = (Math.random() - 0.5) * 30;
+          pos[i * 3 + 2] = (Math.random() - 0.5) * 30;
+        }
+        pos[i * 3] += Math.sin(time * 0.5 + i * 0.1) * 0.002;
+      }
+      particleGeom.attributes.position.needsUpdate = true;
+      particles.rotation.y += 0.0002;
+      
+      animateBoat(time);
+      renderer.render(scene, camera);
+    }
+    
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+    
+    // Chart initialization
+    let sightingsChartInitialized = false;
+    let incidentsChartInitialized = false;
+    let bubbleChartInitialized = false;
+    
+    const chartObserver = new MutationObserver(() => {
+      const activeDataScene = document.querySelector('.data-scene.active');
+      if (activeDataScene) {
+        if (!sightingsChartInitialized && activeDataScene.querySelector('#sightings-chart') && typeof renderSightingsOverTimeSharkbase === 'function') {
+          renderSightingsOverTimeSharkbase({ containerId: "#sightings-chart", dataPath: "sharkbase.csv", width: 700, height: 400 });
+          sightingsChartInitialized = true;
+        }
+        if (!incidentsChartInitialized && activeDataScene.querySelector('#incidents-chart') && typeof renderSharkIncidentsPerYear === 'function') {
+          renderSharkIncidentsPerYear({ containerId: "#incidents-chart", dataPath: "incidents.csv", width: 700, height: 400 });
+          incidentsChartInitialized = true;
+        }
+        if (!bubbleChartInitialized && activeDataScene.querySelector('#bubble-chart') && typeof loadAndPrepareData === 'function') {
+          loadAndPrepareData();
+          bubbleChartInitialized = true;
+        }
+      }
+    });
+    chartObserver.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    
+    animate();
+  </script>
+</body>
+</html>
