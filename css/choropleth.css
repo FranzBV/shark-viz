@@ -1,0 +1,426 @@
+/* === Root Variables === */
+:root {
+    /* Ocean Blue Palette */
+    --deep-ocean: #0A2463;
+    --ocean-blue: #1E3A8A;
+    --medium-blue: #3B82F6;
+    --light-blue: #60A5FA;
+    --sky-blue: #DBEAFE;
+    
+    /* Coral/Warning Accents */
+    --coral-red: #FB6F92;
+    --sunset-orange: #FF6B35;
+    --warning-yellow: #FCD34D;
+    
+    /* Neutrals */
+    --white: #FFFFFF;
+    --off-white: #F9FAFB;
+    --light-gray: #E5E7EB;
+    --medium-gray: #6B7280;
+    --dark-gray: #374151;
+    --near-black: #1F2937;
+    
+    /* Spacing */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 2rem;
+    --spacing-lg: 4rem;
+    --spacing-xl: 6rem;
+    
+    /* Typography */
+    --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-display: 'Inter', sans-serif;
+}
+
+/* === Global Styles === */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* === Container === */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+}
+
+/* === Header/Hero Section === */
+.hero {
+    background: linear-gradient(135deg, var(--deep-ocean) 0%, var(--ocean-blue) 100%);
+    color: var(--white);
+    padding: var(--spacing-xl) var(--spacing-md);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(251, 111, 146, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+.subtitle {
+    font-size: 1.5rem;
+    font-weight: 300;
+    margin-top: var(--spacing-sm);
+    opacity: 0.9;
+}
+
+.tagline {
+    font-size: 1.1rem;
+    margin-top: var(--spacing-sm);
+    opacity: 0.8;
+    font-style: italic;
+}
+
+.wave-divider {
+    height: 60px;
+    width: 100%;
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    background: var(--off-white);
+    clip-path: polygon(0 50%, 100% 0, 100% 100%, 0 100%);
+}
+
+/* === Introduction Section === */
+.introduction {
+    padding: var(--spacing-xl) var(--spacing-md);
+    background-color: var(--white);
+}
+
+.introduction h2 {
+    color: var(--deep-ocean);
+    text-align: center;
+}
+
+.introduction p {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    font-size: 1.1rem;
+    color: var(--dark-gray);
+}
+
+/* === Visualization Sections === */
+.visualization-section {
+    padding: var(--spacing-lg) var(--spacing-md);
+    background-color: var(--off-white);
+}
+
+.visualization-section:nth-child(even) {
+    background-color: var(--white);
+}
+
+.section-header {
+    margin-bottom: var(--spacing-md);
+    text-align: center;
+}
+
+.section-header h2 {
+    margin-bottom: 0;
+    color: var(--deep-ocean);
+}
+
+/* === Visualization Description === */
+.viz-description {
+    max-width: 800px;
+    margin: var(--spacing-md) auto;
+    font-size: 1.05rem;
+    color: var(--dark-gray);
+    text-align: center;
+}
+
+/* === Narrative Box === */
+.narrative-box {
+    background-color: rgba(59, 130, 246, 0.05);
+    border-left: 4px solid var(--medium-blue);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    border-radius: 4px;
+}
+
+.narrative-box p {
+    color: var(--dark-gray);
+    font-size: 1.05rem;
+}
+
+.narrative-box p:last-child {
+    margin-bottom: 0;
+}
+
+/* === Visualization Containers === */
+.viz-container {
+    background-color: var(--white);
+    border: 2px solid var(--light-gray);
+    border-radius: 8px;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    min-height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* === Placeholder Styles === */
+.viz-placeholder {
+    text-align: center;
+    color: var(--medium-gray);
+}
+
+.placeholder-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-sm);
+    opacity: 0.5;
+}
+
+.viz-placeholder p {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--dark-gray);
+    margin-bottom: var(--spacing-xs);
+}
+
+.viz-type {
+    display: inline-block;
+    background-color: var(--sky-blue);
+    color: var(--ocean-blue);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* === Data Source === */
+.legend {
+    background-color: var(--white);
+    border: 1px solid var(--light-gray);
+    border-radius: 6px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.legend h4 {
+    font-size: 0.95rem;
+    color: var(--dark-gray);
+    margin-bottom: var(--spacing-xs);
+    font-weight: 600;
+}
+
+.legend-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* === Data Source === */
+.data-source {
+    font-size: 0.9rem;
+    color: var(--medium-gray);
+    font-style: italic;
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--light-gray);
+}
+
+.data-source strong {
+    color: var(--dark-gray);
+}
+
+/* === Footer === */
+footer {
+    background-color: var(--deep-ocean);
+    color: var(--white);
+    padding: var(--spacing-lg) var(--spacing-md);
+}
+
+footer .container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.team-info h3,
+.data-sources h4 {
+    color: var(--light-blue);
+    margin-bottom: var(--spacing-sm);
+}
+
+.team-info p {
+    opacity: 0.9;
+    line-height: 1.8;
+}
+
+.course-info {
+    margin-top: var(--spacing-sm);
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+
+.data-sources ul {
+    list-style: none;
+}
+
+.data-sources li {
+    margin-bottom: var(--spacing-xs);
+}
+
+.data-sources a {
+    color: var(--light-blue);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.data-sources a:hover {
+    color: var(--white);
+    text-decoration: underline;
+}
+
+/* === Responsive Design === */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2.5rem;
+    }
+    
+    h2 {
+        font-size: 2rem;
+    }
+    
+    .viz-container {
+        min-height: 400px;
+    }
+}
+
+/* === D3 Visualization Specific Styles === */
+.tooltip {
+    position: absolute;
+    padding: 0.75rem;
+    background-color: rgba(31, 41, 55, 0.95);
+    color: var(--white);
+    border-radius: 6px;
+    pointer-events: none;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+.tooltip strong {
+    color: var(--light-blue);
+}
+
+/* Map styles */
+.choropleth-wrapper {
+    width: min(92vw, 1100px);
+    max-width: 1100px;
+    height: clamp(360px, 65vh, 640px);
+    margin: 0 auto;
+    padding: clamp(0.75rem, 2vw, 1.25rem);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Override fixed positioning used by other data-viz blocks in the story page */
+.choropleth-wrapper.data-viz {
+    position: fixed;
+    bottom: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 50;
+    margin: 0;
+}
+
+#choropleth-map {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.choropleth-wrapper .viz-container {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+}
+
+#choropleth-map svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.country {
+    stroke: var(--white);
+    stroke-width: 0.5px;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.country:hover {
+    opacity: 0.8;
+    stroke-width: 1.5px;
+}
+
+/* Chart axes */
+.axis path,
+.axis line {
+    stroke: var(--light-gray);
+    shape-rendering: crispEdges;
+}
+
+.axis text {
+    fill: var(--dark-gray);
+    font-size: 0.85rem;
+}
+
+.axis-label {
+    fill: var(--near-black);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Area chart styles */
+.area {
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.area:hover {
+    opacity: 1;
+}
